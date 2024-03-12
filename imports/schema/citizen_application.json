@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "properties": {
+    "Citizen_application": {
+      "$ref": "#/definitions/Citizen_application"
+    }
+  },
+  "required": [
+    "Citizen_application"
+  ],
+  "title":"Citizen_application",
+  "definitions": {
+    "Citizen_application": {
+      "$id": "#/properties/Citizen_application",
+      "type": "object",
+      "title": "Citizen_application",
+      "required": [
+        "citizen_id",
+        "application_no",
+        "fullName",
+        "email",
+        "phone",
+        "dob",
+        "address"
+      ],
+      "properties": {
+        "citizen_id": {
+          "type": "string"
+        },
+        "application_no": {
+          "type": "string"
+        },
+        "fullName": {
+          "type": "string",
+          "title": "Full Name"
+        },
+        "email": {
+          "type": "string",
+          "title": "Email ID"
+        },
+        "phone": {
+          "type": "string",
+          "title": "Mobile number"
+        },
+        "dob": {
+          "type": "string",
+          "format": "date"
+        },
+        "address": {
+          "type": "string"
+        },
+        "gender": {
+          "type": "string",
+          "enum": [
+            "Male",
+            "Female",
+            "Other"
+          ]
+        }
+      }
+    }
+  },
+  "_osConfig": {
+    "osComment": [],
+    "privateFields": [],
+    "signedFields": [],
+    "indexFields": [],
+    "uniqueIndexFields": [],
+    "roles": ["anonymous"],
+    "inviteRoles": ["anonymous"]
+  }
+}

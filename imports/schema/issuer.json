@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "properties": {
+    "Issuer": {
+      "$ref": "#/definitions/Issuer"
+    }
+  },
+  "required": [
+    "Issuer"
+  ],
+  "title":"Issuer",
+  "definitions": {
+    "Issuer": {
+      "$id": "#/properties/Issuer",
+      "type": "object",
+      "title": "Issuer",
+      "required": [
+        "organizationNumber",
+        "organizationName",
+        "issuerExpiresOn",
+        "issuerIssuedOn",
+        "fullName",
+        "dob"
+      ],
+      "properties": {
+        "organizationNumber": {
+          "type": "string"
+        },
+        "organizationName": {
+          "type": "string"
+        },
+        "issuerExpiresOn": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "issuerIssuedOn": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "benefits": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "fullName": {
+          "type": "string",
+          "title": "Full Name"
+        },
+        "dob": {
+          "type": "string",
+          "format": "date"
+        },
+        "gender": {
+          "type": "string",
+          "enum": [
+            "Male",
+            "Female",
+            "Other"
+          ]
+        },
+        "mobile": {
+          "type": "string",
+          "title": "Mobile number"
+        },
+        "email": {
+          "type": "string",
+          "title": "Email ID"
+        }
+      }
+    }
+  },
+  "_osConfig": {
+    "osComment": [],
+    "privateFields": [],
+    "signedFields": [],
+    "indexFields": [],
+    "uniqueIndexFields": [],
+    "roles": ["anonymous"],
+    "inviteRoles": ["anonymous"]
+  }
+}
