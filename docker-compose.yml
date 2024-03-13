@@ -1,59 +1,117 @@
-version: "3.9"
+version: '2.4'
+
 services:
   db:
     image: postgres
     volumes:
-      - ./${DB_DIR}:/var/lib/postgresql/data
+      - ./${DB_DIR-db-data}:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - '5432:5432'
     environment:
-      - POSTGRES_DB=${DB_NAME}
-      - POSTGRES_USER=${DB_USERNAME}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=registry
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
       timeout: 5s
       retries: 5
   registry:
     image: ghcr.io/sunbird-rc/sunbird-rc-core:${RELEASE_VERSION}
     volumes:
-      - ./${SCHEMA_DIR}:/home/sunbirdrc/config/public/_schemas
+      - ./${SCHEMA_DIR-java/registry/src/main/resources/public/_schemas}:/home/sunbirdrc/config/public/_schemas
+      - ./${VIEW_DIR-java/registry/src/main/resources/views}:/home/sunbirdrc/config/views/
     environment:
-      - connectionInfo_uri=jdbc:postgresql://${DB_URL}/${DB_NAME}
-      - connectionInfo_username=${DB_USERNAME}
-      - connectionInfo_password=${DB_PASSWORD}
-      - authentication_enabled=false
-      - claims_enabled=false
-      - opa_enabled=false
-      - search_limit=2000
-      - search_providerName=${SEARCH_PROVIDER_NAME}
-      - signature_enabled=true
+      - connectionInfo_uri=jdbc:postgresql://db:5432/registry
+      - connectionInfo_username=postgres
+      - connectionInfo_password=postgres
+      - encryption_enabled=${ENCRYPTION_ENABLED-false}
+      - encryption_health_check_url=http://encryption-service:8013/health
+      - encryption_uri=http://encryption-service:8013/crypto/v1/_encrypt
+      - encryption_batch_uri=http://encryption-service:8013/crypto/v1/_encrypt
+      - event_enabled=${EVENT_ENABLED-false}
+      - event_topic=events
+      - event_providerName=dev.sunbirdrc.registry.service.impl.KafkaEventService
+      - elastic_search_connection_url=${ELASTIC_SEARCH_CONNECTION_URL-es:9200}
+      - elastic_search_scheme=${ELASTIC_SEARCH_SCHEME-http}
+      - elastic_search_auth_enabled=${ELASTIC_SECURITY_ENABLED-false}
+      - elastic_search_username=${ELASTIC_SEARCH_USERNAME-elastic}
+      - elastic_search_password=${ELASTIC_SEARCH_PASSWORD}
+      - search_providerName=${SEARCH_PROVIDER_NAME-dev.sunbirdrc.registry.service.NativeSearchService}
+      - sunbird_sso_realm=${KEYCLOAK_REALM-sunbird-rc}
+      - sunbird_sso_url=${sunbird_sso_url-http://keycloak:8080/auth}
+      - oauth2_resource_uri=${oauth2_resource_uri-http://keycloak:8080/auth/realms/sunbird-rc}
+      - oauth2_resource_roles_path=${oauth2_resource_roles_path-realm_access.roles}
+      - identity_provider=${identity_provider-dev.sunbirdrc.auth.keycloak.KeycloakProviderImpl}
+      - idgen_enabled=${IDGEN_ENABLED-false}
+      - idgen_health_check_url=http://id-gen-service:8088/egov-idgen/health
+      - idgen_generate_url=http://id-gen-service:8088/egov-idgen/id/_generate
+      - idgen_id_format_url=http://id-gen-service:8088/egov-idgen/id/_format/add
+      - sunbird_sso_admin_client_id=${KEYCLOAK_ADMIN_CLIENT_ID-admin-api}
+      - sunbird_sso_client_id=${KEYCLOAK_CLIENT_ID-registry-frontend}
+      - sunbird_sso_admin_client_secret=${KEYCLOAK_SECRET}
+      - claims_enabled=${CLAIMS_ENABLED-false}
+      - claims_url=http://claim-ms:8082
+      - did_enabled=${DID_ENABLED-false}
+      - did_health_check_url=${DID_HEALTH_CHECK_URL-http://identity:3332/health}
+      - did_generate_url=${DID_GENERATE_URL-http://identity:3332/did/generate}
+      - did_resolve_url=${DID_RESOLVE_URL-http://identity:3332/did/resolve}
+      - signature_enabled=${SIGNATURE_ENABLED-false}
+      - signature_provider=${SIGNATURE_PROVIDER-dev.sunbirdrc.registry.service.impl.SignatureV2ServiceImpl}
+      - signature_v2_health_check_url=${SIGNATURE_V2_HEALTH_CHECK_URL-http://credential:3000/health}
+      - signature_v2_issue_url=${SIGNATURE_V2_ISSUE_URL-http://credential:3000/credentials/issue}
+      - signature_v2_get_url=${SIGNATURE_V2_GET_URL-http://credential:3000/credentials/{id}}
+      - signature_v2_delete_url=${SIGNATURE_V2_DELETE_URL-http://credential:3000/credentials/{id}}
+      - signature_v2_verify_url=${SIGNATURE_V2_VERIFY_URL-http://credential:3000/credentials/{id}/verify}
+      - signature_v2_revocation_list_url=${SIGNATURE_V2_REVOCATION_LIST_URL-http://credential:3000/credentials/revocation-list?issuerId={issuerDid}&page={page}&limit={limit}}
+      - signature_v2_schema_health_check_url=${SIGNATURE_V2_SCHEMA_HEALTH_CHECK_URL-http://credential-schema:3333/health}
+      - signature_v2_schema_create_url=${SIGNATURE_V2_SCHEMA_CREATE_URL-http://credential-schema:3333/credential-schema}
+      - signature_v2_schema_update_url=${SIGNATURE_V2_SCHEMA_UPDATE_URL-http://credential-schema:3333/credential-schema/{id}/{version}}
+      - signature_v2_schema_get_by_id_and_version_url=${SIGNATURE_V2_SCHEMA_GET_BY_ID_AND_VERSION_URL-http://credential-schema:3333/credential-schema/{id}/{version}
+      - signature_v2_schema_search_by_tags_url=${SIGNATURE_V2_SCHEMA_GET_BY_TAGS_URL-http://credential-schema:3333/credential-schema?tags={tags}}
       - sign_url=http://certificate-signer:8079/sign
       - verify_url=http://certificate-signer:8079/verify
       - sign_health_check_url=http://certificate-signer:8079/health
+      - certificate_enabled=${CERTIFICATE_ENABLED-false}
       - pdf_url=http://certificate-api:8078/api/v1/certificatePDF
       - certificate_health_check_url=http://certificate-api:8078/health
       - template_base_url=http://registry:8081/api/v1/templates/ #Looks for certificate templates for pdf copy of the signed certificate
+      - sunbird_keycloak_user_set_password=true
+      - filestorage_enabled=${FILESSTORAGE_ENABLED-false}
+      - filestorage_connection_url=http://file-storage:9000
+      - filestorage_access_key=admin
+      - filestorage_secret_key=12345678
+      - filestorage_bucket_key=issuance
       - registry_base_apis_enable=false
-      - logging.level.root=INFO
-      - certificate_enabled=true
-      - encryption_enabled=false
+      - sunbird_keycloak_user_password=abcd@123
+      - logging.level.root=DEBUG
       - enable_external_templates=true
-      - async_enabled=${ASYNC_ENABLED}
-      - kafka_bootstrap_address=${KAFKA_BOOTSTRAP_URL}
+      - async_enabled=${ASYNC_ENABLED-false}
+      - authentication_enabled=${AUTHENTICATION_ENABLED-false}
+      - kafka_bootstrap_address=kafka:9092
       - webhook_enabled=false
       - webhook_url=http://localhost:5001/api/v1/callback
-      - manager_type=${MANAGER_TYPE}
-      - swagger_enabled=true
-      - swagger_title=Bangladesh Demo PoC
+      - redis_host=redis
+      - redis_port=6379
+      - manager_type=${MANAGER_TYPE-DefinitionsManager}
+      - expand_reference=${EXPAND_REFERENCE-false}
+      - swagger_title=${SWAGGER_TITLE-Sunbird Registry and Credential}
+      - notification_async_enabled=${NOTIFICATION_ASYNC_ENABLED-false}
+      - notification_enabled=${NOTIFICATION_ENABLED-false}
+      - notification_url=${NOTIFICATION_URL-http://notification-ms:8765/notification-service/v1/notification}
     ports:
-      - "8081:8081"
+      - '8081:8081'
     depends_on:
       db:
         condition: service_healthy
+      keycloak:
+        condition: service_healthy
     healthcheck:
-      test: [ "CMD-SHELL", "wget -nv -t1 --spider http://localhost:8081/health || exit 1" ]
+      test:
+        [
+          'CMD-SHELL',
+          'wget -nv -t1 --spider http://localhost:8081/health || exit 1',
+        ]
       interval: 30s
       timeout: 10s
       retries: 10
@@ -66,9 +124,9 @@ services:
       - DB_VENDOR=postgres
       - DB_ADDR=db
       - DB_PORT=5432
-      - DB_DATABASE=${DB_NAME}
-      - DB_USER=${DB_USERNAME}
-      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_DATABASE=registry
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
       - KEYCLOAK_USER=${KEYCLOAK_ADMIN_USER-admin}
       - KEYCLOAK_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD-admin}
       - KEYCLOAK_IMPORT=/opt/jboss/keycloak/imports/realm-export.json
@@ -84,74 +142,122 @@ services:
     depends_on:
       db:
         condition: service_healthy
-  certificate-signer:
-    image: ghcr.io/sunbird-rc/sunbird-rc-certificate-signer:${RELEASE_VERSION}
+  claim-ms:
+    image: ghcr.io/sunbird-rc/sunbird-rc-claim-ms:v1.0.0
     environment:
-      - PORT=8079
-      - TIME_ZONE=${TIME_ZONE-Asia/Kolkata}
+      - connectionInfo_uri=jdbc:postgresql://db:5432/registry
+      - connectionInfo_username=postgres
+      - connectionInfo_password=postgres
+      - sunbirdrc_url=http://registry:8081
     ports:
-      - "8079:8079"
-    volumes:
-      - ./imports/keys:/etc/signer
-    healthcheck:
-      test:
-        [ "CMD-SHELL", "curl -f http://localhost:8079/health || exit 1" ]
-      interval: 30s
-      timeout: 10s
-      retries: 10
-  certificate-api:
-    image: ghcr.io/sunbird-rc/sunbird-rc-certificate-api:${RELEASE_VERSION}
-    environment:
-      - PORT=8078
-      - QR_TYPE=W3C-VC
-    ports:
-      - "8078:8078"
-    healthcheck:
-      test:
-        [ "CMD-SHELL", "wget -nv -t1 --spider http://localhost:8078/health || exit 1" ]
-      interval: 30s
-      timeout: 10s
-      retries: 10
-  public-key-service:
-    image: ghcr.io/sunbird-rc/sunbird-rc-public-key-service
-    environment:
-      - CONFIG_BASE_PATH=/etc/keys
-    ports:
-      - '3300:3300'
-    healthcheck:
-      test:
-        ['CMD', 'curl', '-f', 'localhost:3300/public-key-service/api/v1/health']
-      interval: 30s
-      timeout: 10s
-      retries: 10
-    volumes:
-      - ./imports/keys:/etc/keys
-  context-proxy-service:
-    image: ghcr.io/sunbird-rc/sunbird-rc-context-proxy-service
-    ports:
-      - '4400:4400'
-    healthcheck:
-      test: ['CMD', 'curl', '-f', 'localhost:4400/health']
-      interval: 30s
-      timeout: 10s
-      retries: 10
-  demo-ui: 
-    image: sunbird-rc/bangladesh-demo-ui
-    ports:
-      - '81:80'
-    volumes:
-      - ./imports/nginx-configurations/nginx.conf:/etc/nginx/conf.d/default.conf
-      - ./imports/nginx-configurations/config.json:/usr/share/nginx/html/assets/config/config.json
+      - '8082:8082'
     depends_on:
+      db:
+        condition: service_started
       registry:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'wget -nv -t1 --spider http://localhost:8082/health || exit 1',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+  vault:
+    image: vault:1.13.3
+    restart: always
+    volumes:
+      - ./vault.json:/vault/config/vault.json
+      - ./vault-data:/vault/file
+    environment:
+      - VAULT_ADDR=${VAULT_ADDR}
+      - VAULT_API_ADDR=${VAULT_API_ADDR}
+      - VAULT_ADDRESS=${VAULT_ADDRESS}
+    cap_add:
+      - IPC_LOCK
+    command: vault server -config=/vault/config/vault.json
+    ports:
+      - 8200:8200
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --spider http://127.0.0.1:8200/v1/sys/health || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+  identity:
+    image: ghcr.io/sunbird-rc/sunbird-rc-identity-service:${RELEASE_VERSION}
+    ports:
+      - "3332:3332"
+    depends_on:
+      vault:
         condition: service_healthy
-      keycloak:
+      db:
         condition: service_healthy
-#  nginx:
-#    image: nginx:latest
-#    ports:
-#      - "80:80"
-#    env_file:
-#      - .env
-#    volumes:
-#      - ./imports/nginx/:/etc/nginx/conf.d/:ro
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/registry
+      - VAULT_ADDR=${VAULT_ADDR}
+      - VAULT_TOKEN=${VAULT_TOKEN}
+      - VAULT_BASE_URL=${VAULT_BASE_URL}
+      - VAULT_ROOT_PATH=${VAULT_ROOT_PATH}
+      - VAULT_TIMEOUT=${VAULT_TIMEOUT}
+      - VAULT_PROXY=${VAULT_PROXY}
+      - SIGNING_ALGORITHM=${SIGNING_ALGORITHM}
+      - JWKS_URI=${JWKS_URI}
+      - ENABLE_AUTH=${ENABLE_AUTH}
+      - WEB_DID_BASE_URL=${WEB_DID_BASE_URL}
+    healthcheck:
+      test:
+        [ "CMD-SHELL", "curl -f http://localhost:3332/health || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  credential-schema:
+    image: ghcr.io/sunbird-rc/sunbird-rc-credential-schema:${RELEASE_VERSION}
+    ports:
+      - "3333:3333"
+    depends_on:
+      db:
+        condition: service_healthy
+      identity:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/registry
+      - IDENTITY_BASE_URL=${IDENTITY_BASE_URL}
+      - JWKS_URI=${JWKS_URI}
+      - ENABLE_AUTH=${ENABLE_AUTH}
+    healthcheck:
+      test:
+        [ "CMD-SHELL", "curl -f http://localhost:3333/health || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  credential:
+    image: ghcr.io/sunbird-rc/sunbird-rc-credentials-service:${RELEASE_VERSION}
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      identity:
+        condition: service_healthy
+      credential-schema:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/registry
+      - IDENTITY_BASE_URL=${IDENTITY_BASE_URL}
+      - SCHEMA_BASE_URL=${SCHEMA_BASE_URL}
+      - CREDENTIAL_SERVICE_BASE_URL=${CREDENTIAL_SERVICE_BASE_URL}
+      - JWKS_URI=${JWKS_URI}
+      - ENABLE_AUTH=${ENABLE_AUTH}
+    healthcheck:
+      test:
+        [ "CMD-SHELL", "curl -f http://localhost:3000/health || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
